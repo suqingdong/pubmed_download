@@ -100,3 +100,6 @@ MONGODB_DBNAME = "pubmed"
 # 存放数据的表名称
 MONGODB_COLNAME = "article"
 # ======================================
+
+
+FEED_EXPORT_ENCODING = 'utf-8'

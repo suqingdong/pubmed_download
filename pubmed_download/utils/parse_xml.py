@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #-*- encoding: utf8 -*-
 import sys
+import googletrans
 
 try:
     import lxml.etree as ET
@@ -17,9 +18,12 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 
 
-def parse_pubmed_xml(text):
+def parse_pubmed_xml(text, translate=False):
 
     tree = ET.fromstring(text)
+
+    if translate:
+        translator = googletrans.Translator()
 
     if tree.find('PubmedArticle') is None:
         yield None
@@ -30,7 +34,10 @@ def parse_pubmed_xml(text):
             pmid = int(MedlineCitation.find('PMID').text)
 
             Article = MedlineCitation.find('Article')
-            issn = ''.join(Article.xpath('Journal/ISSN/text()')) or '.'
+
+            e_issn = ''.join(Article.xpath('Journal/ISSN/text()')) or '.'
+            issn = ''.join(MedlineCitation.xpath('MedlineJournalInfo/ISSNLinking/text()')) or '.'
+
             journal = ''.join(Article.xpath('Journal/Title/text()')) or '.'
             journal_abbr = ''.join(Article.xpath('Journal/ISOAbbreviation/text()')) or '.'
             pubdate = ' '.join(Article.xpath('Journal/JournalIssue/PubDate/*/text()'))
@@ -80,7 +87,15 @@ def parse_pubmed_xml(text):
                     elif each.attrib['IdType'] == 'doi':
                         doi = each.text
 
-            fields = 'pmid issn journal journal_abbr pubdate title abstract author_list publication_types pmc doi'.split()
+            fields = '''
+                pmid issn journal journal_abbr pubdate title abstract
+                author_list publication_types pmc doi e_issn'''.split()
+
+            if translate:
+                abstract_cn = '.'
+                if abstract != '.':
+                    abstract_cn = translator.translate(abstract, dest='zh-cn').text
+                fields.append('abstract_cn')
 
             tmpdict = locals()
             context = {field: tmpdict[field] for field in fields}

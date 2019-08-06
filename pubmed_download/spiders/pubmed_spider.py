@@ -18,6 +18,7 @@ class PubmedSpiderSpider(scrapy.Spider):
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
+        self.translate = self.kwargs.get('translate')
 
     def start_requests(self):
 
@@ -25,7 +26,6 @@ class PubmedSpiderSpider(scrapy.Spider):
 
         retmax = int(self.kwargs.get('retmax', 250))
         start = int(self.kwargs.get('start', 1))
-
         limit = int(self.kwargs.get('limit', 0))
 
         while True:
@@ -58,7 +58,7 @@ class PubmedSpiderSpider(scrapy.Spider):
     def parse(self, response):
 
         # 没有数据时会自动停止爬虫
-        for context in parse_pubmed_xml(response.text):
+        for context in parse_pubmed_xml(response.text, self.translate):
             if context is None:
                 self.crawler.engine.close_spider(self, 'no article any more')
             else:

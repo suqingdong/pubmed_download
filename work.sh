@@ -19,7 +19,7 @@ scrapy crawl pubmed_spider \
   -a start=$n \
   -a limit=$limit
 
-oss -dir novo-diease/suqingdong/pubmed -up $out.jsonl
+oss -dir novo-disease/suqingdong/pubmed -up $out.jsonl
 rm -f $out.jsonl
 
 done
