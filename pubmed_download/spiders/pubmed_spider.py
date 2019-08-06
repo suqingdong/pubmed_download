@@ -26,7 +26,7 @@ class PubmedSpiderSpider(scrapy.Spider):
         retmax = int(self.kwargs.get('retmax', 250))
         start = int(self.kwargs.get('start', 1))
 
-        limit = int(self.kwargs.get('limit', 31362486))
+        limit = int(self.kwargs.get('limit', 0))
 
         while True:
 
@@ -52,12 +52,15 @@ class PubmedSpiderSpider(scrapy.Spider):
             yield scrapy.Request(url, headers=UA.random_ua())
 
             start += retmax
-            if self.kwargs.get('pmid') or (start > limit):
+            if self.kwargs.get('pmid') or (limit and start > limit):
                 break
 
     def parse(self, response):
 
         # 没有数据时会自动停止爬虫
         for context in parse_pubmed_xml(response.text):
-            yield context
+            if context is None:
+                self.crawler.engine.close_spider(self, 'no article any more')
+            else:
+                yield context
 
