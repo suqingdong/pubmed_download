@@ -3,6 +3,7 @@ import sys
 from urllib import urlencode
 
 import scrapy
+import googletrans
 
 from pubmed_download.utils.user_agent import UserAgent as UA
 from pubmed_download.utils.parse_xml import parse_pubmed_xml
@@ -18,7 +19,11 @@ class PubmedSpiderSpider(scrapy.Spider):
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
-        self.translate = self.kwargs.get('translate')
+        self.translator = None
+        if self.kwargs.get('translate') in ('1', 'true'):
+            self.translator = googletrans.Translator(
+                service_urls=['translate.google.cn', 'translate.google.cn']
+            )
 
     def start_requests(self):
 
@@ -29,7 +34,6 @@ class PubmedSpiderSpider(scrapy.Spider):
         limit = int(self.kwargs.get('limit', 0))
 
         while True:
-
             if self.kwargs.get('pmid'):
                 id_list = self.kwargs['pmid']
                 self.logger.info(
@@ -58,9 +62,8 @@ class PubmedSpiderSpider(scrapy.Spider):
     def parse(self, response):
 
         # 没有数据时会自动停止爬虫
-        for context in parse_pubmed_xml(response.text, self.translate):
+        for context in parse_pubmed_xml(response.text, self.translator):
             if context is None:
                 self.crawler.engine.close_spider(self, 'no article any more')
             else:
                 yield context
-

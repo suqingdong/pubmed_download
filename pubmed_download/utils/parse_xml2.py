@@ -1,51 +1,46 @@
 #!/usr/bin/env python
 #-*- encoding: utf8 -*-
-import re
 import sys
 
+import googletrans
 import lxml.etree as ET
+
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
 
-def parse_pubmed_xml(text, translator=None):
+def parse_pubmed_xml(response, translator=None):
 
-    tree = ET.fromstring(text)
 
-    if tree.find('PubmedArticle') is None:
+    if not response.xpath('//pubmedarticle'):
         yield None
     else:
-        for PubmedArticle in tree.iterfind('PubmedArticle'):
-            MedlineCitation = PubmedArticle.find('MedlineCitation')
+        for PubmedArticle in response.xpath('//pubmedarticle'):
+            MedlineCitation = PubmedArticle.xpath('medlinecitation')
 
-            pmid = int(MedlineCitation.find('PMID').text)
+            pmid = int(MedlineCitation.xpath('pmid/text()').get())
 
-            Article = MedlineCitation.find('Article')
+            Article = MedlineCitation.xpath('article')
 
+            e_issn = Article.xpath('journal/issn[@issntype="Electronic"]/text()').get('.')
+            issn = Article.xpath('journal/issn[@issntype="Print"]/text()').get(
+                MedlineCitation.xpath('medlinejournalinfo/issnlinking/text()').get('.')
+            )
 
-            e_issn = ''.join(Article.xpath('Journal/ISSN[@IssnType="Electronic"]/text()')) or '.'
-            issn = ''.join(Article.xpath('Journal/ISSN[@IssnType="Print"]/text()')) or '.'
-            if issn == '.':
-                issn = ''.join(MedlineCitation.xpath('MedlineJournalInfo/ISSNLinking/text()')) or '.'
+            journal = Article.xpath('journal/title/text()').get('.')
+            journal_abbr = Article.xpath('journal/isoabbreviation/text()').get('.')
+            pubdate = ' '.join(Article.xpath('journal/journalissue/pubdate/*/text()').getall())
 
-            journal = ''.join(Article.xpath('Journal/Title/text()')) or '.'
-            journal_abbr = ''.join(Article.xpath('Journal/ISOAbbreviation/text()')) or '.'
-            if journal_abbr != '.':
-                journal_abbr = journal_abbr.replace('.', '')
-
-            pubdate = ' '.join(Article.xpath('Journal/JournalIssue/PubDate/*/text()'))
-
-            title = Article.find('ArticleTitle').text
+            title = Article.xpath('articletitle/text()').get('.')
 
             # ==============================================
             # 1 没有Abstract
             # 2 只有1个AbstractText
-            # 3 有多个AbstractText，获取Label
-            #
+            # 3 有多个AbstractText，同时获取Label
             # * 待解决：编码问题
             # ==============================================
-            AbstractTexts = Article.xpath('Abstract/AbstractText')
+            AbstractTexts = Article.xpath('abstract/abstracttext')
             if not AbstractTexts:
                 abstract = '.'
             elif len(AbstractTexts) == 1:
@@ -61,12 +56,6 @@ def parse_pubmed_xml(text, translator=None):
                     else:
                         abstract.append(text)
                 abstract = '\n'.join(abstract)
-
-            # 特殊字符处理
-            special_chars = u'\u202f|\u2009'.encode('utf-8')
-            abstract = re.sub(special_chars, '', abstract)
-
-            # abstract = abstract.encode('utf-8')
 
             author_list = []
             for author in Article.xpath('AuthorList/Author'):
@@ -90,7 +79,7 @@ def parse_pubmed_xml(text, translator=None):
                 pmid issn journal journal_abbr pubdate title abstract
                 author_list publication_types pmc doi e_issn'''.split()
 
-            if translator:
+            if translate:
                 abstract_cn = '.'
                 if abstract != '.':
                     abstract_cn = translator.translate(abstract, dest='zh-cn').text

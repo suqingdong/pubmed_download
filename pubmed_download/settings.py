@@ -99,7 +99,12 @@ MONGODB_PORT = 27013
 MONGODB_DBNAME = "pubmed"
 # 存放数据的表名称
 MONGODB_COLNAME = "article"
+
 # ======================================
-
-
+# 文件输出编码，显示中文字符等
 FEED_EXPORT_ENCODING = 'utf-8'
+
+# ============================================
+# default: [500, 502, 503, 504, 522, 524, 408]
+# 增加429， 处理 Too Many Requests
+RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]
